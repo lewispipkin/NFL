@@ -1,0 +1,48 @@
+library("tidyverse")
+nfl <- read.csv("~/Downloads/NFL20132017.csv", stringsAsFactors=FALSE) %>% data.frame()
+
+WLhome_or_away <- function(team,homeaway="Home"){
+  if(homeaway=="Home"){
+    nfl %>%
+      filter(Home==team) %>%
+        count(HomeWL) %>% return
+  } else if (homeaway=="Away") {
+    nfl %>%
+      filter(Away==team) %>%
+        count(AwayWL) %>% return
+  } else { return("Home/Away in quotation marks are the only options")}
+}
+##Tells the WL record for home or away
+WLhome_or_away("CHI") %>% rbind(WLhome_or_away("CHI","Away"))
+WLhome_or_away("CHI",1)
+
+WLrecord <- function(team){
+  X <- WLhome_or_away(team,"Away")
+  Y <- WLhome_or_away(team)
+  names(X) <- c("WL","N")
+  names(Y) <- c("WL","N")
+  X %>% 
+    rbind(Y) %>%
+     group_by(WL) %>%
+        summarize(N=sum(N)) %>%
+          return
+}
+WLrecord("NWE")
+
+
+WLrecordbyyear <- function(team,homeaway="Home",year){
+  if(homeaway=="Home" & year %in% c(2013:2017)){
+    nfl %>%
+      filter(Home==team, Year==year) %>%
+      count(HomeWL) %>% return
+  } else if (homeaway=="Away" & year %in% c(2013:2017)) {
+    nfl %>%
+      filter(Away==team, Year==year) %>%
+      count(AwayWL) %>% return
+  } else { return("Home/Away in quotation marks are the only options for the homeaway argument, and this dataset only contains the 2013-2017 seasons.")}
+}
+WLrecordbyyear("DET","Home",2013)
+WLrecordbyyear("ATL","Home",2015)
+
+
+
