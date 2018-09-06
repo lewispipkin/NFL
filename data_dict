@@ -1,0 +1,20 @@
+Team1: abbreviation of first team in matchup
+symbol: indicates whether Team1 is at home or away- @ means the game is at Team2, vs means the game is at Team1
+Team2: abbreviation of the second team in matchup
+Year: year
+Date: YYYY-MM-DD
+MonthNo: Month
+DayNum: Day of month
+Time: time of kickoff
+Week: Week from 1-17
+Game: Game number out of 16 for Team1
+Weekday: day of the week
+Team1WL: whether Team1 won or lost
+Team1Pts: how many points Team1 scored
+Team2Pts: how many points Team2 scored
+Margin: Team1Pts - Team2Pts
+OT: " " if no OT, "OT" if the game went into overtime
+Spread: point spread from Vegas
+vsLine: Whether Team1 covered the spread or not
+OU: over/ under on total points, from Vegas
+OUResult: whether total points was under or over the OU
