@@ -1,0 +1,115 @@
+---
+title: "The Killshot: How soon into each game the winning team secured the victory"
+author: "Lewis Pipkin"
+date: "7/7/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+A few nights ago, I was a little restless and bored waiting for Kawhi to announce his decision, so I decided to take my mind off of basketball for a while and dig into some football drive summaries (a huge thanks to [pro-football-reference](pro-football-reference.com)!). I had a nice idea: At what point in each game was the game *over?*
+
+What I mean is, at what point could the winning team have just stopped scoring, and they still would have won? The football equivalent of what is called, in baseball, the [game-winning RBI](https://en.wikipedia.org/wiki/Game-winning_RBI). (This was pointed out to me by another Reddit user, I don't know anything about baseball and I certainly wasn't alive in the 80s, when that was a recorded statistic.)
+
+So, let's see how we can figure this out, and then visualize it.
+
+```{r packages}
+library(readxl)
+library(tidyverse)
+library(ggthemes)
+```
+
+```{r}
+nfl <- read_excel("Documents/nfl scoring drives.xlsx")
+head(nfl, 10)
+
+```
+
+We import the data and check out the first few rows. The first team corresponds with the result, so we're going to want only `Result`s that start with a 'W'. Also, importing from Excel sometimes gives you some weird dates or times, so we'll have to fix the `Time` column as well. So, we'll rename columns and filter down to what we need:
+
+```{r}
+names(nfl)[1] <- 'winner'
+names(nfl)[4] <- 'loser'
+names(nfl)[9] <- 'winner score'
+names(nfl)[10] <- 'loser score'
+nfl <- nfl[which(grepl("W",nfl$Result)),]
+nfl$Time <- str_extract(nfl$Time,"[:digit:][:digit:]\\:[:digit:][:digit:](?=\\:)")
+```
+
+Then we'll need to convert that time into seconds so we can graph the data clearly.
+
+```{r}
+nfl$time_remaining <- (4-nfl$Qtr)*15*60 + as.numeric(str_extract(nfl$Time,'[:digit:][:digit:](?=\\:)'))*60+as.numeric(str_extract(nfl$Time,'(?<=\\:)[:digit:][:digit:]'))
+```
+
+This is where the interesting stuff starts: we need to pull out the winning score and find only the drive where the winning score was scored.
+
+```{r}
+nfl$go_ahead_score <- as.numeric(str_extract(nfl$Result,"(?<=\\-)[:digit:]+"))
+nfl %>% filter(`winner score` >= go_ahead_score) -> nfl
+nfl %>% arrange(Date,winner,`winner score`) -> A
+```
+
+All of the scoring drives after the killshot are also included in there, though. So we'll have to remove duplicates based on `winner` and `Date`, because the same team can't win twice on the same date. Since they're arranged by Date, winner, and score, all in ascending order, it's pretty easy:
+
+```{r}
+A[!duplicated(A[,c('winner','Date')]),] -> B
+```
+
+Then we convert how far we are into the game into how far we are to the end, which is just the total number of seconds (60 seconds \* 15 minutes \* 4 quarters \= `3600`) in the game minus the time remaining. Then we filter out overtime games (games ending in ties were already filtered out earlier because there was no game-sealing drive).
+
+```{r}
+B$time_into_game=3600-B$time_remaining
+B %>% filter(time_remaining >= 0) -> B
+
+```
+
+So, here's the final result:
+
+```{r}
+B %>% ggplot(aes(x=time_into_game)) + geom_histogram(binwidth=30) + 
+  scale_x_continuous(name="Time",
+                     labels = c(paste0("1Q-",rev(seq(3,15,3)),"m"),
+                                "End of 1st quarter",
+                                paste0("2Q-",rev(seq(3,12,3)),"m"),
+                                "End of 1st half",
+                                paste0("3Q-",rev(seq(3,12,3)),"m"),
+                                "End of 3rd quarter",
+                                paste0("4Q-",rev(seq(3,12,3)),"m"),
+                                "End of game"),
+                     breaks = seq(0, 3600, 180)) +
+  theme_solarized() + 
+  geom_vline(xintercept=median(B$time_into_game)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.4)) +
+  ggtitle("The Kill Shot:\n How soon into each game the winning team secured the victory") +
+  theme(plot.title = element_text(color = "black",hjust = 0.5)) +
+  labs(caption="Source: pro-football-reference.com")
+
+```
+
+So there you have it! A nice, clean-looking graph of every killshot in the NFL in 2018. In the 2018 season, the 3 most common times the killshot is delivered are at the very end of the game (which is what we all expected), at the two-minute warning in the 2nd half, and at the end of the 1st half. The vertical line is the median killshot time, which is midway through the 3rd quarter.
+
+Bonus: here are a couple of frivolities. The 3 fastest killshots are, as follows (with links!):
+
+```{r}
+B %>% arrange(time_into_game) %>% head(3)
+```
+
+
+[Tyreek Hill's 67-yarder from Pat Mahomes, Kansas City over Oakland, December 30th.](https://www.chiefs.com/video/patrick-mahomes-tyreek-hill-connect-on-67-yard-td) The Raiders went on to score 3 points.
+
+[Josh Allen's 10-yard rush, Buffalo over Minnesota, September 23rd.](https://www.buffalobills.com/video/can-t-miss-play-josh-allen-10-yard-td-run) Minnesota scored 6 points as Buffalo easily covered the +17 spread. (Shit, they could have covered -17.)
+
+[Alex Collins' 8-yard run, Baltimore over Buffalo, September 9th.](https://www.youtube.com/watch?v=L8wc41FM-Rs) Buffalo scored 3 points, Baltimore scored... 47.
+
+Interestingly enough, Buffalo suffered the earliest killshot of the nascent season at the hands (wings?) of the Ravens, then turned around two weeks later to deliver an earlier one to the Vikings. Sick.
+
+Then we have the top 10 teams in terms of earliest average killshot. This is with minutes remaining in the game: 
+
+```{r}
+B %>% group_by(winner) %>% summarize(mean=mean(time_remaining)/60) %>% arrange(desc(mean)) %>% head(10)
+```
+
+-LP
