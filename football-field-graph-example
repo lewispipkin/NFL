@@ -1,0 +1,43 @@
+rm(list=ls())
+library(tidyverse)
+library(nflscrapR)
+
+scrape_game_ids(2018) -> games
+games %>% filter(state_of_game=="POST" & (home_team=='TEN'|away_team=='TEN')) %>% pull(game_id) -> ids
+
+game_play_by_play(ids[1]) %>% filter(PlayType =='Run') -> rushes
+for( i in 2:16){
+  print(i)
+  print(nrow(rushes))
+  game_play_by_play(ids[i]) %>% filter(PlayType =='Run') -> rushes2
+  rushes <- rbind(rushes,rushes2)
+}
+
+table(rushes$RunLocation)
+rushes %>% filter(posteam=='TEN') %>% filter(!is.na(RunLocation)) %>% filter(Yards.Gained < 30)-> tnrush
+table(tnrush$RunLocation)
+
+
+ggplot(tnrush, aes(x=Yards.Gained,group=RunLocation)) +
+  geom_dotplot(stackdir = "center",binwidth = .35) + 
+  coord_flip() + 
+  ggtitle("Tennessee Titans rushing yards\n per attempt, yards gained < 30")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  facet_wrap(~RunLocation) +
+  # panel.margin = unit(c(-0.5,0-0.5,0), "lines") +
+  theme(axis.text.x = element_blank()) +
+  ylab('Frequency') +
+  xlab('Yards gained',vjust=.5) +
+  theme(axis.text.y = element_text(angle = 90, hjust = 0.5,vjust=-5,size=25,color='white')) +
+  geom_vline(xintercept = c(0,10,20),alpha=.3)+
+  geom_vline(xintercept = c(5,15,25),col='white',alpha=.3)+
+  theme(
+    panel.background = element_rect(
+                                    fill = "#0ec43e",
+                                    size = 2, 
+                                    linetype = "solid"
+                                    )
+        ) +  
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  scale_y_continuous(breaks=NULL)+
+  theme(panel.margin.y=unit(0,"lines"))
