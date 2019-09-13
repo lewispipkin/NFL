@@ -3,7 +3,7 @@ library(tidyverse)
 library(nflscrapR)
 
 scrape_game_ids(2018) -> games
-games %>% filter(state_of_game=="POST" & (home_team=='TEN'|away_team=='TEN')) %>% pull(game_id) -> ids
+games %>% filter(state_of_game=="POST" & (home_team=='TEN'|away_team=='TEN')) %>% pull(game_id) -> ids #only Titans games
 
 game_play_by_play(ids[1]) %>% filter(PlayType =='Run') -> rushes
 for( i in 2:16){
@@ -24,7 +24,6 @@ ggplot(tnrush, aes(x=Yards.Gained,group=RunLocation)) +
   ggtitle("Tennessee Titans rushing yards\n per attempt, yards gained < 30")+
   theme(plot.title = element_text(hjust = 0.5))+
   facet_wrap(~RunLocation) +
-  # panel.margin = unit(c(-0.5,0-0.5,0), "lines") +
   theme(axis.text.x = element_blank()) +
   ylab('Frequency') +
   xlab('Yards gained',vjust=.5) +
